@@ -235,37 +235,45 @@ class Observables:
    
             self.t3phi_model.append(t3phi)
             
+
+    def chi2_t3(self):
+
+        self.chi2_t3 = 0.
+        self.nchi2_t3 = 0
+        
+        for i in range(self.n_files):
+                
+            diff = np.abs(self.t3phi_model[i] - self.t3phi_data[i])
+                
+            idx = diff > 180.
+            diff[idx] = 360. - diff[idx]
+                
+            diff2 = (diff / self.err_t3phi_data[i])**2
+            diff2 = diff2[diff2 == diff2]
+                
+            self.nchi2_t3 += len(diff2)
+            self.chi2_t3 += np.sum(diff2)
+
+        if self.chi2_t3 <= 0.:
             
+            self.chi2_t3 = np.nan
+            self.nchi2_t3 = 0
+        
 
-    def compute_chi_square(self):
+    def chi2_vis2(self):
 
-        self.chi2 = 0.
-        self.n_chi2 = 0
+        self.chi2_vis2 = 0.
+        self.nchi2_vis2 = 0
         
         for i in range(self.n_files):
 
             diff2 = ((self.vis2_model[i] - self.vis2_data[i]) / self.err_vis2_data[i])**2
             diff2 = diff2[diff2 == diff2]
             
-            self.n_chi2 += len(diff2)
-            self.chi2 += np.sum(diff2)
+            self.nchi2_vis2 += len(diff2)
+            self.chi2_vis2 += np.sum(diff2)
         
-        if self.t3phi_model is not []:
-
-            for i in range(self.n_files):
-                
-                diff = np.abs(self.t3phi_model[i] - self.t3phi_data[i])
-                
-                idx = diff > 180.
-                diff[idx] = 360. - diff[idx]
-                
-                diff2 = (diff / self.err_t3phi_data[i])**2
-                diff2 = diff2[diff2 == diff2]
-                
-                self.n_chi2 += len(diff2)
-                self.chi2 += np.sum(diff2)
-
-        if self.chi2 == 0:
+        if self.chi2 <= 0:
             
-            self.chi2 = np.nan
-            self.n_chi2 = 0
+            self.chi2_vis2 = np.nan
+            self.nchi2_vis2 = 0
