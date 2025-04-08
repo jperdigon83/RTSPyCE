@@ -236,7 +236,25 @@ class Observables:
             self.t3phi_model.append(t3phi)
             
 
-    def chi2_t3(self):
+    def compute_chi2_vis2(self):
+
+        self.chi2_vis2 = 0.
+        self.nchi2_vis2 = 0
+        
+        for i in range(self.n_files):
+
+            diff2 = ((self.vis2_model[i] - self.vis2_data[i]) / self.err_vis2_data[i])**2
+            diff2 = diff2[diff2 == diff2]
+            
+            self.nchi2_vis2 += len(diff2)
+            self.chi2_vis2 += np.sum(diff2)
+        
+        if self.chi2_vis2 <= 0:
+            
+            self.chi2_vis2 = np.nan
+            self.nchi2_vis2 = 0
+            
+    def compute_chi2_t3(self):
 
         self.chi2_t3 = 0.
         self.nchi2_t3 = 0
@@ -258,22 +276,3 @@ class Observables:
             
             self.chi2_t3 = np.nan
             self.nchi2_t3 = 0
-        
-
-    def chi2_vis2(self):
-
-        self.chi2_vis2 = 0.
-        self.nchi2_vis2 = 0
-        
-        for i in range(self.n_files):
-
-            diff2 = ((self.vis2_model[i] - self.vis2_data[i]) / self.err_vis2_data[i])**2
-            diff2 = diff2[diff2 == diff2]
-            
-            self.nchi2_vis2 += len(diff2)
-            self.chi2_vis2 += np.sum(diff2)
-        
-        if self.chi2 <= 0:
-            
-            self.chi2_vis2 = np.nan
-            self.nchi2_vis2 = 0
