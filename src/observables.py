@@ -250,8 +250,9 @@ class Observables:
             self.chi2_vis2 += np.sum(diff2)
         
         if self.chi2_vis2 <= 0:
-            
-            self.chi2_vis2 = np.nan
+
+            print("Warning chi2 vis2 <= 0")
+            self.chi2_vis2 = -np.inf
             self.nchi2_vis2 = 0
             
     def compute_chi2_t3(self):
@@ -273,6 +274,7 @@ class Observables:
             self.chi2_t3 += np.sum(diff2)
 
         if self.chi2_t3 <= 0.:
-            
-            self.chi2_t3 = np.nan
+
+            print("Warning chi2 t3 <= 0")
+            self.chi2_t3 = -np.inf
             self.nchi2_t3 = 0

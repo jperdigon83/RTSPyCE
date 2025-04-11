@@ -280,6 +280,7 @@ if __name__ == "__main__":
     plt.plot(wave, Cabs, label="amC-hanner-Cabs")
     plt.plot(wave, Csca, label="amC-hanner-Csca")
     
+    
     # refidx_file = np.genfromtxt("../data/dust/amC-zb1.nk")
     # Cabs, Csca = dust_opacities(refidx_file, wave, aGrains, wgt, extrapolate=True)
     
