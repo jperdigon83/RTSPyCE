@@ -19,6 +19,7 @@
 import numpy as np
 import math as mt
 import sys
+from scipy.interpolate import interp1d
 
 rt_dir = '/home/jperdigon/projects/rt_spyce'
 sys.path.append(rt_dir + '/src')
@@ -54,21 +55,17 @@ class GasAndDustDisc:
 
     def __init__(self, params):
 
-        # Loading wavelenghts and frequencies
-     
-        self.wavelengths = wavelengths
-        self.nu = ct.c / wavelengths
-
-        # The wavelength at which we constrain the optical depth
+        """ A circumstellar bi-component disc with a gas disc (free electrons) extending from the stellar radius to the dust inner radius.
+        """
         
-        wavelengths_0 = 1.0e-6
-        nu_0 = ct.c / wavelengths_0
-
         # ---
         #
         # PARAMETERS
         #
         # ---
+
+        self.wavelengths = params["wavelengths"]
+        self.wavelengths_0 = params["reference_wavelength"]
       
         self.R_star = params["R_star"]
         self.Teff_star = params["Teff_star"]
@@ -91,32 +88,43 @@ class GasAndDustDisc:
         self.Hin_dust = params["Hin_dust"]
         self.Tin_dust = params["Tin_dust"]
         self.pow_T_dust = params["pow_T_dust"]
-        self.log10_grain_radius_min = params["log10(amin)"]
-        self.log10_grain_radius_max = params["log10(amax)"]
-        self.pow_grain_radii = params["pow_a"]
-
+        self.Cabs_dust = params["Cabs_dust"]
+        self.Csca_dust = params["Csca_dust"]
+        
         self.incl = params["incl"]
         self.PA = np.deg2rad(params["PA"])
 
-        # Grid parameters
+        # Frequencies vector
+
+        self.nu = ct.c / self.wavelengths
+        self.nnu = len(self.nu)
+        nu_0 = ct.c / self.wavelengths_0
+
+        # ---
+        # Circumstellar grid
+        # ---
 
         n_theta = 128
         nr_dust = 64
         nr_gas = 32
 
         self.theta = np.arccos(np.linspace(1., 0., n_theta))
-
         cos_theta, sin_theta = np.cos(self.theta), np.sin(self.theta)
+
+        Rin_Rstar = (self.Rin_dust - 1e-5) / self.R_star
+        log_Rin_Rstar = mt.log(Rin_Rstar)
+        r_gas = self.R_star * np.exp(log_Rin_Rstar * np.linspace(0., 1., nr_gas))
+        r_gas = np.logspace(mt.log10(self.R_star), mt.log10(self.Rin_dust - 1e-5), nr_gas)
+
+        Rout_Rin = self.Rout_dust/self.Rin_dust
+        log_Rout_Rin = mt.log(Rout_Rin)
+        r_dust = self.Rin_dust * np.exp(log_Rout_Rin * np.linspace(0., 1., nr_dust))
         
         # ---
         #
         # Gas disc
         #
         # ---
-
-        Rin_Rstar = self.Rin_dust / self.R_star
-        
-        r_gas = np.logspace(mt.log10(self.R_star), mt.log10(self.Rin_dust - 1e-5), nr_gas)
         
         R_gas = r_gas[:, None] * sin_theta[None, :]
         z_gas = r_gas[:, None] * cos_theta[None, :]
@@ -127,7 +135,7 @@ class GasAndDustDisc:
 
         H_gas = self.Hin_gas * (R_gas/self.R_star)**self.pow_H_gas
 
-        integrand = (1. - np.exp(-ct.h * nu_0 / (ct.k_B * T_gas[:, -1]))) * (r_gas/self.R_star)**(2. * self.pow_n_gas) * gas.gaunt_factor(np.array([wavelengths_0]), T_gas[:, -1])[0] / np.sqrt(T_gas[:, -1])
+        integrand = (1. - np.exp(-ct.h * nu_0 / (ct.k_B * T_gas[:, -1]))) * (r_gas/self.R_star)**(2. * self.pow_n_gas) * gas.gaunt_factor(np.array([self.wavelengths_0]), T_gas[:, -1])[0] / np.sqrt(T_gas[:, -1])
         
         A = 3.692349106159646e-2 * ct.R_sun * power_law_integration(r_gas, integrand) / nu_0**3
 
@@ -155,15 +163,13 @@ class GasAndDustDisc:
         epsilon_gas = np.empty_like(Kext_gas)
         idx = Kext_gas > np.finfo(float).tiny
         epsilon_gas[idx] = Kabs_gas[idx] / Kext_gas[idx]
-        epsilon_gas[~idx] = 0.
+        epsilon_gas[~idx] = 1.
 
         # ---
         #
         # Dust disc
         #
         # ---
-        
-        r_dust = np.logspace(mt.log10(self.Rin_dust), mt.log10(self.Rout_dust), nr_dust)
         
         R_dust = r_dust[:, None] * sin_theta[None, :]
         z_dust = r_dust[:, None] * cos_theta[None, :]
@@ -172,16 +178,10 @@ class GasAndDustDisc:
         T_dust[:, 1:] = self.Tin_dust * (R_dust[:, 1:]/self.Rin_dust)**self.pow_T_dust
         T_dust[:, 0] = T_dust[:, 1]
 
-    
-        grain_radii = np.logspace(self.log10_grain_radius_min, self.log10_grain_radius_max, 128)
-
-        grain_radii_dist = (grain_radii/grain_radii[0])**self.pow_grain_radii
-
-        Cabs, Csca = dust.dust_opacities(refidx_astroSil, wavelengths, grain_radii, wgt=grain_radii_dist, extrapolate=True)
-        Cabs0, Csca0 = dust.dust_opacities(refidx_astroSil, np.array([wavelengths_0]), grain_radii, wgt=grain_radii_dist, extrapolate=True)
-        Cext = Cabs + Csca
+        Cabs0 = np.exp(interp1d(np.log(self.wavelengths), np.log(self.Cabs_dust))(mt.log(self.wavelengths_0)))
+        Csca0 = np.exp(interp1d(np.log(self.wavelengths), np.log(self.Csca_dust))(mt.log(self.wavelengths_0)))
         Cext0 = Cabs0 + Csca0
-        
+
         # Number density
 
         H_dust = np.empty_like(R_dust)
@@ -203,9 +203,11 @@ class GasAndDustDisc:
         n_dust[:, 1:] = nin_dust * (R_dust[:, 1:]/self.Rin_dust)**self.pow_n_dust * np.exp(-0.5*(z_dust[:, 1:]/H_dust[:, 1:])**2)
         n_dust[:, 0] = n_dust[:, 1]
 
+        Cext = self.Cabs_dust + self.Csca_dust
+        
         Kext_dust = n_dust[None, :, :] * Cext[:, None, None]
-        epsilon_dust = np.ones_like(Kext_dust) * Cabs[:, None, None] / Cext[:, None, None]
 
+        epsilon_dust = np.ones_like(Kext_dust) * self.Cabs_dust[:, None, None] / Cext[:, None, None]
 
         # ---
         #
@@ -238,12 +240,11 @@ class GasAndDustDisc:
 
 
 
-        
-    def polar_images(self, params_test=(2, 51, 51, 51)):
+    def polar_images(self, params_test=(9, 33, 33, 51)):
 
         Rin_Rstar = self.Rin_dust / self.R_star
         log_Rin_Rstar = mt.log(Rin_Rstar)
-
+        
         Rout_Rin = self.Rout_dust / self.Rin_dust
         log_Rout_Rin = mt.log(Rout_Rin)
         
@@ -281,20 +282,19 @@ class GasAndDustDisc:
 
         # Computing the half the image with the ray-tracing routine, for efficiency purpose
         N_v_h = int(0.5*self.N_v)
-        nnu = len(self.wavelengths)
 
         foo = RTSpyce(self.r, self.theta)
         
         intensityMap = foo.intensity_map(np.ravel(self.x[:, :N_v_h]), np.ravel(self.y[:, :N_v_h]), self.incl, self.S, self.Kext, self.I_star)
         
-        self.image = np.empty((nnu, self.N_u, self.N_v))
+        self.image = np.empty((self.nnu, self.N_u, self.N_v))
         
-        self.image[:, :, :N_v_h] = intensityMap.reshape(nnu, self.N_u, N_v_h)
+        self.image[:, :, :N_v_h] = intensityMap.reshape(self.nnu, self.N_u, N_v_h)
         self.image[:, :, N_v_h:] = self.image[:, :, :N_v_h][:, :, ::-1]
         
         # Converting x, y, and dS in radians, for the computation of physical observables
 
-        self.image = np.reshape(self.image, (nnu, self.N_u*self.N_v))
+        self.image = np.reshape(self.image, (self.nnu, self.N_u*self.N_v))
         
         self.x = np.ravel(self.x) / self.dist
         
@@ -304,11 +304,8 @@ class GasAndDustDisc:
 
         # Computing the observed flux
         
-        self.flux = np.sum(self.image * self.dS[None, :], axis=-1)
+        self.flux = np.sum(self.image*self.dS[None, :], axis=-1)
 
-
-
-        
     def cartesian_images(self, N, width):
 
         dx = width / N
@@ -327,15 +324,14 @@ class GasAndDustDisc:
         # Computing the half of the image with the ray-tracing routine, for efficiency purpose
 
         Nh = int(0.5*N)
-        nnu = len(self.wavelengths)
 
         foo = RTSpyce(self.r, self.theta)
         
         intensityMap = foo.intensity_map(np.ravel(self.x[:Nh, :]), np.ravel(self.y[:Nh, :]), self.incl, self.S, self.Kext, self.I_star)
       
-        self.image = np.empty((nnu, N, N))
+        self.image = np.empty((self.nnu, N, N))
         
-        self.image[:, :Nh, :] = intensityMap.reshape(nnu, Nh, N)
+        self.image[:, :Nh, :] = intensityMap.reshape(self.nnu, Nh, N)
         
         self.image[:, Nh:, :] = self.image[:, :Nh, :][:, ::-1, :]
 
@@ -345,32 +341,51 @@ class GasAndDustDisc:
         
         dS = (dx / self.dist)**2
         self.dS = np.full_like(self.x, dS)
-        self.x /= self.d
-        self.y /= self.d
+        self.x /= self.dist
+        self.y /= self.dist
 
         # Computing the observed flux
 
         self.flux = np.sum(self.image, axis=(1, 2)) * dS
 
-
-
-        
 if __name__ == "__main__":
 
     import matplotlib.pyplot as plt
     from observables import Observables
+    from dust import opacities
 
     obs_L = Observables()
     wave_L = np.array([3.4e-6, 3.6e-6, 3.8e-6])
-    obs_L.load_data("../data/L-band/Chop/old_reduction/", np.min(wave_L), np.max(wave_L))
+    obs_L.load_data("/home/jperdigon/projects/massif/fs_cma/data/MATISSE_LM/Chop/old_reduction/", np.min(wave_L), np.max(wave_L))
 
     obs_N = Observables()
     wave_N = np.linspace(9e-6, 11e-6, 8)
-    obs_N.load_data('../data/N-band/old_reduction/', np.min(wave_N), np.max(wave_N))
+    obs_N.load_data('/home/jperdigon/projects/massif/fs_cma/data/MATISSE_N/old_reduction/', np.min(wave_N), np.max(wave_N))
 
-    sed_data = np.genfromtxt("../data/flux/flux_unred.dat", comments='"')
+    sed_data = np.genfromtxt("/home/jperdigon/projects/massif/fs_cma/data/HD45677_flux.dat", comments='"')
 
-    params_model = {"R_star": 4.,
+    flux_wavelengths = np.logspace(mt.log10(sed_data[0, 0]), mt.log10(sed_data[-1, 0]), 64)
+    wavelengths = np.concatenate((flux_wavelengths, wave_L, wave_N))
+    wavelengths = np.unique(wavelengths)
+    wavelengths = np.sort(wavelengths)
+
+    refractive_index_list = [np.genfromtxt("/home/jperdigon/projects/rt_spyce/data/dust/amC_Hanner.nk"), np.genfromtxt("/home/jperdigon/projects/rt_spyce/data/dust/crMgFeSil.nk")]
+    
+    grain_radii = np.logspace(-8, -3, 128)
+    grain_radii_list = [grain_radii, grain_radii]
+    
+    grain_dist = (grain_radii/grain_radii[0])**(-3.5)
+  
+    grain_dist_list = [grain_dist, grain_dist]
+
+    grain_prop_list = np.array([0.5, 0.5])
+    
+    foo = opacities(wavelengths, refractive_index_list, grain_radii_list, grain_dist_list, grain_prop_list)
+
+    params_model = {"wavelengths": wavelengths,
+                    "reference_wavelength": 1e-6,
+
+                    "R_star": 4.,
                     "Teff_star": 21800.,
                     "log(g_star)": 4.0,
                     "[M/H]_star": 0.,
@@ -379,35 +394,29 @@ if __name__ == "__main__":
                     "tau_gas": 1e2,
                     "pow_n_gas": -3.5,
                     "pow_H_gas": 1.5,
-                    "Hin_gas": 0.1,
+                    "Hin_gas": 0.09,
                     "Tin_gas": 20000,
                     "pow_T_gas": -0.75,
                 
                     "Rin_dust": 1000.,
-                    "Rout_dust": 1e9,
+                    "Rout_dust": 1e6,
                     "tau_dust": 1e1,
                     "pow_n_dust": -2.0,
                     "pow_H_dust": 1.3,
-                    "Hin_dust": 150.,
+                    "Hin_dust": 150,
                     "Tin_dust": 1200.,
-                    "pow_T_dust": -0.70,
-                    "log10(amin)": -8.,
-                    "log10(amax)": -5.,
-                    "pow_a": -3.5,
+                    "pow_T_dust": -0.7,
+                    "Cabs_dust": foo[0],
+                    "Csca_dust": foo[1],
+                    
                     "incl": 53.,
                     "PA": 20.}
 
-    flux_wavelengths = np.logspace(mt.log10(sed_data[0, 0]), mt.log10(sed_data[-1, 0]), 64)
-    wavelengths = np.concatenate((flux_wavelengths, wave_L, wave_N))
-    wavelengths = np.unique(wavelengths)
-    wavelengths = np.sort(wavelengths)
-    
-     
     # ----
     # Computing physical observables
     # ---
     
-    model = GasAndDustDisc(params_model, wavelengths)
+    model = GasAndDustDisc(params_model)
     model.polar_images()
     
     obs_L.compute_visibilities(model, True, 1.8)

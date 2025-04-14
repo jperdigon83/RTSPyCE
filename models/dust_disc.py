@@ -35,21 +35,14 @@ class DustDisc:
 
     def __init__(self, params):
 
-        # Loading wavelenghts and frequencies
-
-        self.wavelengths = params["wavelengths"]
-        nu = ct.c / self.wavelengths
-        nnu = len(nu)
-
-        # The wavelength at which we constrain the optical depth
-        
-        wavelengths_0 = params["reference_wavelength"]
-       
         # ---
         #
         # PARAMETERS
         #
         # ---
+
+        self.wavelengths = params["wavelengths"]
+        self.wavelengths_0 = params["reference_wavelength"]
       
         self.R_star = params["R_star"]
         self.Teff_star = params["Teff_star"]
@@ -71,6 +64,12 @@ class DustDisc:
         self.incl = params["incl"]
         self.PA = np.deg2rad(params["PA"])
 
+        # Frequencies vector
+
+        self.nu = ct.c / self.wavelengths
+        self.nnu = len(self.nu)
+
+        
         # Grid parameters
 
         n_theta = 128
@@ -90,7 +89,7 @@ class DustDisc:
 
         T_cavity = np.zeros((2, n_theta))
 
-        Kext_cavity = np.zeros((nnu, 2, n_theta))
+        Kext_cavity = np.zeros((self.nnu, 2, n_theta))
 
         epsilon_cavity = np.ones_like(Kext_cavity)
         
@@ -116,8 +115,8 @@ class DustDisc:
         T_dust[:, 0] = T_dust[:, 1]
 
         
-        Cabs0 = np.exp(interp1d(np.log(self.wavelengths), np.log(self.Cabs_dust))(mt.log(wavelengths_0)))
-        Csca0 = np.exp(interp1d(np.log(self.wavelengths), np.log(self.Csca_dust))(mt.log(wavelengths_0)))
+        Cabs0 = np.exp(interp1d(np.log(self.wavelengths), np.log(self.Cabs_dust))(mt.log(self.wavelengths_0)))
+        Csca0 = np.exp(interp1d(np.log(self.wavelengths), np.log(self.Csca_dust))(mt.log(self.wavelengths_0)))
         Cext0 = Cabs0 + Csca0
         
         # Number density
@@ -169,7 +168,7 @@ class DustDisc:
 
         T = np.concatenate((T_cavity, T_dust), axis=0)
 
-        B = planck.planck_function_freq(nu, T)
+        B = planck.planck_function_freq(self.nu, T)
         
         J_star = stellar_scattering.compute_stellar_mean_intensity(self.R_star, self.I_star, self.r, self.Kext)
 
@@ -216,8 +215,6 @@ class DustDisc:
         self.x = self.u * np.sin(self.v)
         self.y = self.u * np.cos(self.v)
 
-        nnu = self.S.shape[0]
-        
         # Computing the half the image with the ray-tracing routine, for efficiency purpose
         N_v_h = int(0.5*self.N_v)
 
@@ -225,14 +222,14 @@ class DustDisc:
         
         intensityMap = foo.intensity_map(np.ravel(self.x[:, :N_v_h]), np.ravel(self.y[:, :N_v_h]), self.incl, self.S, self.Kext, self.I_star)
         
-        self.image = np.empty((nnu, self.N_u, self.N_v))
+        self.image = np.empty((self.nnu, self.N_u, self.N_v))
         
-        self.image[:, :, :N_v_h] = intensityMap.reshape(nnu, self.N_u, N_v_h)
+        self.image[:, :, :N_v_h] = intensityMap.reshape(self.nnu, self.N_u, N_v_h)
         self.image[:, :, N_v_h:] = self.image[:, :, :N_v_h][:, :, ::-1]
         
         # Converting x, y, and dS in radians, for the computation of physical observables
 
-        self.image = np.reshape(self.image, (nnu, self.N_u*self.N_v))
+        self.image = np.reshape(self.image, (self.nnu, self.N_u*self.N_v))
         
         self.x = np.ravel(self.x) / self.d
         
@@ -262,15 +259,14 @@ class DustDisc:
         # Computing the half of the image with the ray-tracing routine, for efficiency purpose
 
         Nh = int(0.5*N)
-        nnu = self.S.shape[0]
 
         foo = RTSpyce(self.r, self.theta)
         
         intensityMap = foo.intensity_map(np.ravel(self.x[:Nh, :]), np.ravel(self.y[:Nh, :]), self.incl, self.S, self.Kext, self.I_star)
       
-        self.image = np.empty((nnu, N, N))
+        self.image = np.empty((self.nnu, N, N))
         
-        self.image[:, :Nh, :] = intensityMap.reshape(nnu, Nh, N)
+        self.image[:, :Nh, :] = intensityMap.reshape(self.nnu, Nh, N)
         
         self.image[:, Nh:, :] = self.image[:, :Nh, :][:, ::-1, :]
 
@@ -425,8 +421,6 @@ if __name__ == "__main__":
     ax.set_yscale("log")
 
 
-    
 
-    
     plt.show()
     
