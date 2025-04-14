@@ -114,7 +114,7 @@ class GasAndDustDisc:
         Rin_Rstar = (self.Rin_dust - 1e-5) / self.R_star
         log_Rin_Rstar = mt.log(Rin_Rstar)
         r_gas = self.R_star * np.exp(log_Rin_Rstar * np.linspace(0., 1., nr_gas))
-        r_gas = np.logspace(mt.log10(self.R_star), mt.log10(self.Rin_dust - 1e-5), nr_gas)
+        # r_gas = np.logspace(mt.log10(self.R_star), mt.log10(self.Rin_dust - 1e-5), nr_gas)
 
         Rout_Rin = self.Rout_dust/self.Rin_dust
         log_Rout_Rin = mt.log(Rout_Rin)
@@ -215,7 +215,7 @@ class GasAndDustDisc:
         #
         # ---
         
-        self.I_star = stellar_radiation.stellar_radiation(wavelengths, "ck04models", self.Teff_star, self.mh_star, self.log_g_star) * wavelengths**2 / ct.c
+        self.I_star = stellar_radiation.stellar_radiation(self.wavelengths, "ck04models", self.Teff_star, self.mh_star, self.log_g_star) * self.wavelengths**2 / ct.c
       
 
         # ---
