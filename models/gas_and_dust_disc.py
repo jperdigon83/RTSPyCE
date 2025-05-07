@@ -240,7 +240,7 @@ class GasAndDustDisc:
 
 
 
-    def polar_images(self, params_test=(9, 33, 33, 51)):
+    def polar_images(self, params_test=(2, 33, 33, 51)):
 
         Rin_Rstar = self.Rin_dust / self.R_star
         log_Rin_Rstar = mt.log(Rin_Rstar)
