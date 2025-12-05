@@ -1,8 +1,11 @@
 import numpy as np
+from envelope import Envelope
+from source import Source
+from rtspyce import RTSpyce
 
 class Image:
 
-    def __init__(self, x, y, dpix, incl, d, wave, intensity):
+    def __init__(self, incl, d, wave, x, y, dpix, intensity):
 
         if not len(x) == len(y):
             raise ValueError("x and y should have the same length")
@@ -15,20 +18,28 @@ class Image:
 
         if not incl <= 0.:
             raise ValueError("incl should be inferior or equal to 90 degrees")
-      
+        
         if not d > 0.:
             raise ValueError("d should be positive")
 
-        
-        
         self.x = x
         self.y = y
         self.dpix = dpix
         self.incl = incl
         self.d = d
         self.wave = wave
-        self.intensity = intensity
-        self.flux = np.sum(intensity * dpix[None, :], axis=1) / d**2
+
+    def compute_intensity(self, env: Envelope, src: Source):
+
+        #### A finir #####
+        
+        foo = RTSpyce(env.r, env.theta)
+        
+        self.intensity = foo.intensity_map(self.x, self.y, self.incl, env.S, env.Kext, src.intensity)
+        
+    def compute_flux(self):
+
+        self.flux = np.sum(self.intensity * self.dpix[None, :], axis=1) / self.d**2
         
 
 class UniformCartesianImage(Image):
