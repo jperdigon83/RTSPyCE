@@ -5,7 +5,7 @@ from rtspyce import RTSpyce
 
 class Image:
 
-    def __init__(self, incl, d, wave, x, y, dpix, intensity):
+    def __init__(self, incl, d, wave, x, y, dpix):
 
         if not len(x) == len(y):
             raise ValueError("x and y should have the same length")
@@ -29,9 +29,10 @@ class Image:
         self.d = d
         self.wave = wave
 
-    def compute_intensity(self, env: Envelope, src: Source):
+        self.npix = len(self.x)
+        self.nwave = len(self.wave)
 
-        #### A finir #####
+    def compute_intensity(self, env: Envelope, src: Source):
         
         foo = RTSpyce(env.r, env.theta)
         
@@ -44,7 +45,7 @@ class Image:
 
 class UniformCartesianImage(Image):
 
-    def __init__(self, N, L, incl, d, wavelengths):
+    def __init__(self, N, L, incl, d, wave):
 
         self.N = N
         self.L = L
@@ -55,8 +56,16 @@ class UniformCartesianImage(Image):
 
         dpix = np.ones(len(x)) * dx
     
-        #super().__init__(x, y, dpix, incl, d, wavelengths, intensity)
+        # super().__init__()
 
+    def compute_intensity(self, env: Envelope, src: Source):
+        
+        foo = RTSpyce(env.r, env.theta)
+
+        self.intensity = np.empty((self.npix, self.nwave))
+        
+        self.intensity[:, ] = foo.intensity_map(self.x[], self.x[], self.incl, env.S, env.Kext, src.intensity)
+        
     def reconstruct_image(self):
         
         x = np.reshape(self.x, (self.N, self.N))
