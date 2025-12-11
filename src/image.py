@@ -37,7 +37,15 @@ class Image:
 
         
     def compute_intensity(self, env: Envelope, src: Source):
-        
+
+        if not src.R == env.r[0]:
+            raise ValueError("Source radius and r[0] should be equal")
+
+        if not np.all(self.wave == env.wave):
+            raise ValueError("Image and Envelope wavelengths should be equal")
+    
+        if not np.all(self.wave == src.wave):
+            raise ValueError("Image and Source wavelengths should be equal")
         foo = RTSpyce(env.r, env.theta)
         
         self.intensity = foo.intensity_map(self.x, self.y, self.incl, env.S, env.Kext, src.intensity)
@@ -46,6 +54,8 @@ class Image:
     def compute_flux(self):
 
         self.flux = np.sum(self.intensity * self.dpix[None, :], axis=1) / self.d**2
+
+
 
 
 class UniformCartesianImage(Image):
@@ -64,30 +74,42 @@ class UniformCartesianImage(Image):
         self.N = N
         self.L = L
         
-        dx = L / N
-        xmax = 0.5 * L * (1. - dx)
+        xmax = 0.5 * L * (1. - 1./N)
         x = np.linspace(-xmax, xmax, N)
 
         x, y = np.meshgrid(x, x, indexing="ij")
         x = x.flatten()
         y = y.flatten()
 
-        dpix = np.ones(len(x)) * dx
+        dpix = np.ones(len(x)) * L / N
     
         super().__init__(incl, d, wave, x, y, dpix)
 
     def compute_intensity(self, env: Envelope, src: Source):
+
+        if not src.R == env.r[0]:
+            raise ValueError("Source radius and r[0] should be equal")
+
+        if not np.all(self.wave == env.wave):
+            raise ValueError("Image and Envelope wavelengths should be equal")
+    
+        if not np.all(self.wave == src.wave):
+            raise ValueError("Image and Source wavelengths should be equal")
         
         foo = RTSpyce(env.r, env.theta)
 
         self.intensity = np.empty((self.nwave, self.npix))
 
         Nh = int(self.N**2/2)
-        
-        self.intensity[:, :Nh] = foo.intensity_map(self.x[:Nh], self.y[:Nh], self.incl, env.S, env.Kext, src.intensity)
 
-        self.intensity[:, Nh:] = self.intensity[:, :Nh][:, ::-1]
-    
+        dum_var = foo.intensity_map(self.x[:Nh], self.y[:Nh], self.incl, env.S, env.Kext, src.intensity)
+
+        self.intensity[:, :Nh] = dum_var
+         
+        dum_var = np.reshape(dum_var, (self.nwave, int(self.N/2), self.N))
+
+        self.intensity[:, Nh:] = np.reshape(dum_var[:, ::-1, :], (self.nwave, (self.N*int(self.N/2))))
+
         
     def reconstruct_image(self):
         
@@ -96,9 +118,7 @@ class UniformCartesianImage(Image):
         
         image = np.reshape(self.intensity, (self.nwave, self.N, self.N))
         
-        return x, y, image 
-
-
+        return x, y, image
 
     
 if __name__ == "__main__":
@@ -106,30 +126,33 @@ if __name__ == "__main__":
     import math as mt
     import matplotlib.pyplot as plt
 
-    L = 5.
+    L = 20.
     nwave = 2
-    N = 32
+    N = 128
+    incl = 60.
     wave = np.linspace(1e-6, 2e-6, nwave)
-    img = UniformCartesianImage(N, L, 0., 10., wave)
+    img = UniformCartesianImage(N, L, incl, 10., wave)
 
     
-    nr, ntheta = 16, 16
+    nr, ntheta = 32, 32
 
+    tau = 10.
     r = np.linspace(1., 10., nr)
     theta = np.linspace(0., 0.5*mt.pi, ntheta)
-    Kext = np.ones((nwave, nr, ntheta))
+    Kext = tau * np.ones((nwave, nr, ntheta)) / (r[-1] - r[0])
+    Kext[:, :, :28] = 0.
     S = np.copy(Kext)
     env = Envelope(wave, r, theta, Kext, S)
 
+    
     R = 1.0
-    temp = 5800.
+    temp = 0.
     src = BlackBodySphere(R, temp, wave)
 
     img.compute_intensity(env, src)
 
+    fig, ax = plt.subplots(1, 1, figsize=(3.5, 3.5), layout="tight")
     x, y, intensity = img.reconstruct_image()
-    
-    print(x, y, intensity)
-
-    plt.pcolormesh(x, y, intensity[0])
+   
+    ax.pcolormesh(x, y, intensity[0])
     plt.show()

@@ -47,9 +47,6 @@ class RTSpyce:
 
     def intersections_with_grid(self, x, y, incl):
 
-        assert len(x) == len(y)
-        assert incl >= 0.0 and incl <= 90.
-        
         incl = np.deg2rad(incl)
         n = len(x)
         x2 = x*x
