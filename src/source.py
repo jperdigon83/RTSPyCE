@@ -20,7 +20,3 @@ class BlackBodySphere(Source):
         intensity = planck.planck_function_wave(wave, temp)
         
         super().__init__(R, wave, intensity)
-
-        
-
-if __name__ == "__main__":
