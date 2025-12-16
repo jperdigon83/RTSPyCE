@@ -21,6 +21,7 @@ import math as mt
 import glob
 from astropy.io import fits
 from scipy.interpolate import interp1d
+from image import Image
 
 class Observables:
     
@@ -134,7 +135,7 @@ class Observables:
                 print('Warning: lambda array for ' + file + ' not in [lamMin, lamMax], the file will we ignored.')
 
 
-    def compute_visibilities(self, model, apodisation=False, telescopeDiameter=None):
+    def compute_visibilities(self, img: Image, apodisation=False, telescopeDiameter=None):
 
         """
         MODEL REQUIREMENTS:
@@ -153,12 +154,12 @@ class Observables:
         # SELECTING MODELS IN THE WAVELENGTHS BAND OF OBSERVATIONS
         # ---
       
-        idx = (model.wavelengths >= self.lamMin) & (model.wavelengths <= self.lamMax)
+        idx = (img.wave >= self.lamMin) & (img.wave <= self.lamMax)
       
         assert np.count_nonzero(idx) > 1
 
-        wavelengths_model = model.wavelengths[idx]
-        images_model = model.image[idx]
+        wavelengths_model = img.wave[idx]
+        images_model = img.intensity[idx]
 
         # ---
         # APODIZATION WITH AN ESTIMATE OF THE PSF OF THE TELESCOPE
@@ -167,13 +168,13 @@ class Observables:
         if apodisation is True:
             
             sigma_psf = wavelengths_model / (2.355*telescopeDiameter)
-            images_model *= np.exp(-0.5*(model.x[None, :]**2 + model.y[None, :]**2)/sigma_psf[:, None]**2)
+            images_model *= np.exp(-0.5*(img.x[None, :]**2 + img.y[None, :]**2)/sigma_psf[:, None]**2)
             
         # ---
         # COMPUTATION OF THE OBSERVED FLUX
         # ---
 
-        flux_model = np.sum(images_model*model.dS, axis=-1)
+        flux_model = img.compute_flux()
 
         idx = flux_model > np.finfo(float).tiny
         

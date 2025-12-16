@@ -42,10 +42,11 @@ class Image:
             raise ValueError("Source radius and r[0] should be equal")
 
         if not np.all(self.wave == env.wave):
-            raise ValueError("Image and Envelope wavelengths should be equal")
+            raise ValueError("Image and Envelope wavelengths should be equal")  # For the moment we impose this.
     
         if not np.all(self.wave == src.wave):
             raise ValueError("Image and Source wavelengths should be equal")
+        
         foo = RTSpyce(env.r, env.theta)
         
         self.intensity = foo.intensity_map(self.x, self.y, self.incl, env.S, env.Kext, src.intensity)
@@ -53,11 +54,23 @@ class Image:
         
     def compute_flux(self):
 
-        self.flux = np.sum(self.intensity * self.dpix[None, :], axis=1) / self.d**2
+        return np.sum(self.intensity * self.dpix[None, :], axis=1) / self.d**2
+    
+    def compute_fourier_transform(self, u, v):
+
+        alpha = self.x / self.d
+        beta = self.y / self.d
+
+        ulam = u[:, None] / self.wave[None, :]
+        vlam = v[:, None] / self.wave[None, :]
+        
+        phasor = np.exp(-2.0 * 1j * mt.pi * (ulam[:, :, None] * alpha[None, None, :] + vlam[:, :, None] * beta[None, None, :]))
+        
+        return np.sum(self.intensity[None, :, :] * phasor * self.dpix[None, None, :], axis=-1) / self.d**2
 
 
 
-
+    
 class UniformCartesianImage(Image):
 
     def __init__(self, N, L, incl, d, wave):
@@ -120,27 +133,27 @@ class UniformCartesianImage(Image):
         
         return x, y, image
 
-    
+  
 if __name__ == "__main__":
 
     import math as mt
     import matplotlib.pyplot as plt
 
     L = 20.
-    nwave = 2
+    nwave = 3
     N = 128
     incl = 60.
-    wave = np.linspace(1e-6, 2e-6, nwave)
-    img = UniformCartesianImage(N, L, incl, 10., wave)
+    d = 1.e9
+    wave = np.linspace(1e-6, 10e-6, nwave)
+    img = UniformCartesianImage(N, L, incl, d, wave)
 
     
-    nr, ntheta = 32, 32
-
+    nr, ntheta = 64, 64
     tau = 10.
     r = np.linspace(1., 10., nr)
     theta = np.linspace(0., 0.5*mt.pi, ntheta)
     Kext = tau * np.ones((nwave, nr, ntheta)) / (r[-1] - r[0])
-    Kext[:, :, :28] = 0.
+    Kext[:, :, :-5] = 0.
     S = np.copy(Kext)
     env = Envelope(wave, r, theta, Kext, S)
 
@@ -150,9 +163,21 @@ if __name__ == "__main__":
     src = BlackBodySphere(R, temp, wave)
 
     img.compute_intensity(env, src)
-
-    fig, ax = plt.subplots(1, 1, figsize=(3.5, 3.5), layout="tight")
+    flux = img.compute_flux()
+    
+    u = np.linspace(15, 250, 128)
+    ft = img.compute_fourier_transform(u, u)
+    V2 = (np.abs(ft) / flux)**2
+    print(np.shape(ft))
+    
     x, y, intensity = img.reconstruct_image()
+     
+    fig, ax = plt.subplots(1, 2, figsize=(3.5, 3.5), layout="tight")
    
-    ax.pcolormesh(x, y, intensity[0])
+    ax[0].pcolormesh(x, y, intensity[0])
+
+    for i in range(nwave):
+        ax[1].plot(2*u**2/wave[i], V2[:, i])
+
+    ax[1].set_yscale("log")
     plt.show()
