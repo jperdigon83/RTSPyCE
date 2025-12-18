@@ -137,16 +137,6 @@ class Observables:
 
     def compute_visibilities(self, img: Image, apodisation=False, telescopeDiameter=None):
 
-        """
-        MODEL REQUIREMENTS:
-
-        model.x: shape = (npixels), unit = radians
-        model.y: shape = (npixels), unit = radians
-        model.dS: shape = (npixels), unit = radians**2
-        model.wavelengths: shape = (nwavelengths), unit = meters
-        model.image:  shape = (n_wavelengths, npixels), unit = whatever
-        """
-        
         self.vis_model = []
         self.vis2_model = []
         
@@ -182,18 +172,21 @@ class Observables:
         # COMPUTATION OF THE VISIBILITIES
         # ---
 
-        cosPA, sinPA = mt.cos(model.PA), mt.sin(model.PA)
+        cosPA, sinPA = mt.cos(img.PA), mt.sin(img.PA)
 
         for i in range(self.n_files):
 
             u_model = cosPA * self.u_data[i] + sinPA * self.v_data[i]
             v_model = - sinPA * self.u_data[i] + cosPA * self.v_data[i]
-        
-            phase = -2 * mt.pi * 1j * (model.x[None, None, :]*u_model[:, None, None] + model.y[None, None, :]*v_model[:, None, None]) / wavelengths_model[None, :, None]
+
+            alpha = img.x[None, None, :] / img.d
+            beta = img.y[None, None, :] / img.d
+            
+            phase = -2 * mt.pi * 1j * (alpha*u_model[:, None, None] + beta*v_model[:, None, None]) / wavelengths_model[None, :, None]
 
             V_model = np.zeros((self.n_baselines[i], len(wavelengths_model)), dtype=complex)
           
-            V_model[:, idx] = np.sum(images_model[None, idx, :] * np.exp(phase[:, idx]) * model.dS[None, None, :], axis=-1) / flux_model[None, idx]
+            V_model[:, idx] = np.sum(images_model[None, idx, :] * np.exp(phase[:, idx]) * img.dpix[None, None, :], axis=-1) / (img.d**2 * flux_model[None, idx])
 
             # Linearly interpolating complex visibilities of the model on the data wavelengths
             

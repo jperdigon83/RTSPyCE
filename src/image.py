@@ -5,7 +5,7 @@ from rtspyce import RTSpyce
 
 class Image:
 
-    def __init__(self, incl, d, wave, x, y, dpix):
+    def __init__(self, incl, PA, d, wave, x, y, dpix):
 
         if not len(x) == len(y):
             raise ValueError("x and y should have the same length")
@@ -25,11 +25,18 @@ class Image:
         if not d > 0.:
             raise ValueError("d should be positive")
 
+        if not PA >= 0.:
+            raise ValueError("PA should be >= 0")
+
+        if not PA < 360.:
+            raise ValueError("PA should be < 360 degrees")
+
+        self.incl = incl
+        self.PA = PA
+        self.d = d
         self.x = x
         self.y = y
         self.dpix = dpix
-        self.incl = incl
-        self.d = d
         self.wave = wave
 
         self.npix = len(self.x)
@@ -70,10 +77,10 @@ class Image:
 
 
 
-    
+
 class UniformCartesianImage(Image):
 
-    def __init__(self, N, L, incl, d, wave):
+    def __init__(self, N, L, incl, PA, d, wave):
 
         if not L > 0:
             raise ValueError("L sould be positive")
@@ -96,7 +103,7 @@ class UniformCartesianImage(Image):
 
         dpix = np.ones(len(x)) * L / N
     
-        super().__init__(incl, d, wave, x, y, dpix)
+        super().__init__(incl, PA, d, wave, x, y, dpix)
 
     def compute_intensity(self, env: Envelope, src: Source):
 
@@ -143,9 +150,10 @@ if __name__ == "__main__":
     nwave = 3
     N = 128
     incl = 60.
+    PA = 0.
     d = 1.e9
     wave = np.linspace(1e-6, 10e-6, nwave)
-    img = UniformCartesianImage(N, L, incl, d, wave)
+    img = UniformCartesianImage(N, L, incl, PA, d, wave)
 
     
     nr, ntheta = 64, 64
