@@ -25,7 +25,7 @@ from image import Image
 
 class Observables:
     
-    def load_data(self, dataDir, lamMin, lamMax, verbose=False):
+    def __init__(self, dataDir, lamMin, lamMax, verbose=False):
 
         assert lamMin < lamMax
 
