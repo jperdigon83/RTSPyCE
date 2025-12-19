@@ -20,7 +20,7 @@ import math as mt
 import numpy as np
 from scipy.interpolate import RegularGridInterpolator as RGI
 
-class RTSpyce:
+class RTSPyCE:
 
     def __init__(self, r, theta):
 

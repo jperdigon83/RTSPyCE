@@ -1,7 +1,7 @@
 import numpy as np
 from envelope import Envelope
 from source import BlackBodySphere, Source
-from rtspyce import RTSpyce
+from rtspyce import RTSPyCE
 
 class Image:
 
