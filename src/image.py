@@ -54,7 +54,7 @@ class Image:
         if not np.all(self.wave == src.wave):
             raise ValueError("Image and Source wavelengths should be equal")
         
-        foo = RTSpyce(env.r, env.theta)
+        foo = RTSPyCE(env.r, env.theta)
         
         self.intensity = foo.intensity_map(self.x, self.y, self.incl, env.S, env.Kext, src.intensity)
 
@@ -88,7 +88,7 @@ class UniformCartesianImage(Image):
         if not N > 0:
             raise ValueError("N should be positive")
         
-        if not N % 2 == 0:
+        if not (N % 2) == 0:
             raise ValueError("N should be even")
         
         self.N = N
@@ -116,7 +116,7 @@ class UniformCartesianImage(Image):
         if not np.all(self.wave == src.wave):
             raise ValueError("Image and Source wavelengths should be equal")
         
-        foo = RTSpyce(env.r, env.theta)
+        foo = RTSPyCE(env.r, env.theta)
 
         self.intensity = np.empty((self.nwave, self.npix))
 
@@ -140,7 +140,15 @@ class UniformCartesianImage(Image):
         
         return x, y, image
 
-  
+
+class PolarImage(Image):
+
+    def __init__(self, u, N, incl, PA, d, wave):
+
+        foo = None
+
+
+    
 if __name__ == "__main__":
 
     import math as mt
