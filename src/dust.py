@@ -38,9 +38,13 @@ def integrate(a, func):
 
 
 def opacities(wavelengths, refractive_index_list, grain_radii_list, grain_dist_list, grain_prop_list):
-    """ Doc to write, but this function is better than the one below """
+    """ Computes the opacities of a mixture of dust grains. For each dust mixture, provide the grain radii, distribution, and proportion in the mixture"""
+    sum_prop = np.sum(grain_prop_list)
 
-    assert np.sum(grain_prop_list) == 1.
+    if sum_prop != 1.:
+        grain_prop_list /= sum_prop
+        
+    # assert np.sum(grain_prop_list) == 1.
     assert len(refractive_index_list) == len(grain_radii_list)
     assert len(refractive_index_list) == len(grain_dist_list)
     

@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 import os
 pathdir = os.path.dirname(os.path.realpath(__file__))
 

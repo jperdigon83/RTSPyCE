@@ -1,4 +1,5 @@
 import numpy as np
+import math as mt
 from envelope import Envelope
 from source import BlackBodySphere, Source
 from rtspyce import RTSPyCE
@@ -146,54 +147,3 @@ class PolarImage(Image):
     def __init__(self, u, N, incl, PA, d, wave):
 
         foo = None
-
-
-    
-if __name__ == "__main__":
-
-    import math as mt
-    import matplotlib.pyplot as plt
-
-    L = 20.
-    nwave = 3
-    N = 128
-    incl = 60.
-    PA = 0.
-    d = 1.e9
-    wave = np.linspace(1e-6, 10e-6, nwave)
-    img = UniformCartesianImage(N, L, incl, PA, d, wave)
-
-    
-    nr, ntheta = 64, 64
-    tau = 10.
-    r = np.linspace(1., 10., nr)
-    theta = np.linspace(0., 0.5*mt.pi, ntheta)
-    Kext = tau * np.ones((nwave, nr, ntheta)) / (r[-1] - r[0])
-    Kext[:, :, :-5] = 0.
-    S = np.copy(Kext)
-    env = Envelope(wave, r, theta, Kext, S)
-
-    
-    R = 1.0
-    temp = 0.
-    src = BlackBodySphere(R, temp, wave)
-
-    img.compute_intensity(env, src)
-    flux = img.compute_flux()
-    
-    u = np.linspace(15, 250, 128)
-    ft = img.compute_fourier_transform(u, u)
-    V2 = (np.abs(ft) / flux)**2
-    print(np.shape(ft))
-    
-    x, y, intensity = img.reconstruct_image()
-     
-    fig, ax = plt.subplots(1, 2, figsize=(3.5, 3.5), layout="tight")
-   
-    ax[0].pcolormesh(x, y, intensity[0])
-
-    for i in range(nwave):
-        ax[1].plot(2*u**2/wave[i], V2[:, i])
-
-    ax[1].set_yscale("log")
-    plt.show()

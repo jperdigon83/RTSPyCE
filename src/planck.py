@@ -17,22 +17,22 @@
 # * <https://www.gnu.org/licenses/>.
 
 import numpy as np
-import astropy.constants as ct
+import constants as ct
 
 # ---
 # CONSTANTS
 # ---
 
-c2 = ct.c.value * ct.c.value
-hc = ct.h.value * ct.c.value
-hc2 = ct.h.value * c2
+c2 = ct.c * ct.c
+hc = ct.h * ct.c
+hc2 = ct.h * c2
 dhc2 = 2 * hc2
 dhc = 2 * hc
 
-dhoc2 = 2. * ct.h.value / c2
+dhoc2 = 2. * ct.h / c2
 
-hkB = ct.h.value / ct.k_B.value
-hckB = hkB * ct.c.value
+hkB = ct.h / ct.k_B
+hckB = hkB * ct.c
 
 # ---
 # FUNCTIONS
@@ -54,7 +54,7 @@ def planck_function_freq(freq, T):
   
     with np.errstate(divide='ignore'):
         
-        X = ct.h.value * freq / (ct.k_B.value * T)
+        X = ct.h * freq / (ct.k_B * T)
 
     nu3 = freq * freq * freq
     
@@ -114,7 +114,7 @@ if __name__ == '__main__':
     fontsize = 20
 
     lam = np.logspace(-15, 15., 1024)
-    nu = ct.c.value / lam
+    nu = ct.c / lam
 
     # ---
     # 1ST TEST: The whole temperature range
