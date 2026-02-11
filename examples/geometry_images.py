@@ -5,7 +5,7 @@ sys.path.append(pathdir+'/../src')
 import matplotlib.pyplot as plt
 import numpy as np
 import math as mt
-import RayTracingImage as RTI
+import rtspyce as RTI
 
 plt.close('all')
 
@@ -69,7 +69,7 @@ if __name__=="__main__":
 
     x, y = np.meshgrid(x, y, indexing='ij')
 
-    model = RTI.RayTracingImage(np.ravel(x), np.ravel(y), r, theta, Kext, S, Istar, rStar=Rstar, incl=incl)
+    model = RTI.RTSPyCE(np.ravel(x), np.ravel(y), r, theta, Kext, S, Istar, incl=incl)
 
     imag = np.reshape(model.intensityMap, (1, N, N))
 

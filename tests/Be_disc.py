@@ -14,29 +14,45 @@ import source
 
 if __name__ == "__main__":
 
-    L = 30
+    L = 10
     N = 128
-    incl = 0.
+    incl = 30.
     PA = 0.
     d = 1e8
-    wave = np.linspace(1.5, 1.8, 8) * 1e-6
+    
+    wave_J = np.linspace(1.1, 1.3, 9)
+    wave_H = np.linspace(1.5, 1.8, 10)
+    wave_K = np.linspace(2.0, 2.4, 13)
+    wave_L = np.linspace(3.2, 3.6, 13)
+    
+    wave_M = np.linspace(4.5, 4.9, 9)
+    wave_N = np.linspace(9.0, 12.0, 13)
+    wave_Q = np.linspace(18.0, 24.0, 13)
+
+    wave = np.concatenate((wave_J, wave_H, wave_K, wave_L, wave_M, wave_N, wave_Q))
+    wave = np.unique(wave)
+    wave = np.sort(wave)
+    wave *= 1e-6
+
+    #wave = np.logspace(mt.log10(1.1), mt.log10(24.0), 64) * 1e-6
+    
     nwave = len(wave)
     nu = ct.c / wave
     img = image.UniformCartesianImage(N, L, incl, PA, d, wave)
 
     Rstar = 1.0
     Tstar = 16500.
-    src = source.BlackBodySphere(Rstar, Tstar, nu)
+    src = source.BlackBody(Rstar, Tstar, wave)
     
-    nr, ntheta = 64, 64
-    r = np.linspace(Rstar, 50*Rstar, nr)
+    nr, ntheta = 128, 128
+    r = np.logspace(mt.log10(Rstar), mt.log10(50*Rstar), nr)
     theta = np.linspace(0., 0.5*mt.pi, ntheta)
     theta = np.arccos(np.linspace(1., 0., ntheta))
 
     R = r[:, None] * np.sin(theta[None, :])
     Z = r[:, None] * np.cos(theta[None, :])
     
-    tau = 1e3
+    tau = 1e2
     H0 = 0.1
     K0 = tau / (mt.sqrt(2.*mt.pi) * H0) 
 
@@ -88,7 +104,7 @@ if __name__ == "__main__":
     V2 = (np.abs(ft) / flux)**2
     
     x, y, intensity = img.reconstruct_image()
-
+    
     fig, ax = plt.subplots(2, 2, figsize=(8, 8))
     
     for a in ax.flat:
@@ -97,7 +113,9 @@ if __name__ == "__main__":
     alpha_mas = 206264806.2471 * x/d 
     beta_mas = 206264806.2471 * y/d
     
-    c = ax[0, 0].pcolormesh(alpha_mas, beta_mas, intensity[0], cmap="afmhot")
+    #c = ax[0, 0].pcolormesh(alpha_mas, beta_mas, intensity[0], cmap="afmhot")
+    c = ax[0, 0].pcolormesh(alpha_mas, beta_mas, intensity[0], cmap="afmhot", norm=LogNorm(clip=True), shading="nearest", antialiased=False)
+    ax[0, 0].contour(alpha_mas, beta_mas, intensity[0], colors="tab:green")
     cbar = fig.colorbar(c, ax=ax[0, 0], orientation='vertical', fraction=0.046, pad=0.04)
     ax[0, 0].set_xlabel(r"$\alpha ~ [mas]$")
     ax[0, 0].set_ylabel(r"$\beta ~ [mas]$")
@@ -106,7 +124,7 @@ if __name__ == "__main__":
     ax[0, 1].set_xlim(-100., 100)
     ax[0, 1].set_ylim(-100., 100)
     ax[0, 1].set_xlabel(r"$x ~ [m]$")
-    ax[0, 1].set_ylabel(r"$y ~ [m]$")
+    ax[0, 1].set_ylabel(r"$x ~ [m]$")
 
     colors = np.array(["tab:orange", "tab:blue", "tab:red", "tab:green", "tab:purple", "tab:brown"])
 
@@ -118,7 +136,7 @@ if __name__ == "__main__":
     
         ax[1, 0].scatter(ulmas, vlmas, c=colors[i], marker=".")
         ax[1, 0].scatter(-ulmas, -vlmas, c=colors[i], marker=".")
-        ax[1, 1].plot(Blmas, V2[i, :], c=colors[i])
+        ax[1, 1].scatter(Blmas, V2[i, :], c=colors[i], marker="+")
         
 
     ax[1, 0].set_xlabel(r"$u / \lambda ~ [mas^{-1}]$")
@@ -128,5 +146,4 @@ if __name__ == "__main__":
     ax[1, 1].set_xlabel(r"$B / \lambda ~ [mas^{-1}]$")
     ax[1, 1].set_ylabel(r"$|V|^2$")
 
-    plt.savefig("test_Be_disc.pdf")
-    plt.show()
+    plt.savefig("Be_disc.pdf")

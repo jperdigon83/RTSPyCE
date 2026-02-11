@@ -47,16 +47,3 @@ class Envelope:
         self.theta = theta
         self.Kext = Kext
         self.S = S
-
-if __name__ == "__main__":
-
-    nwave, nr, ntheta = 32, 64, 128
-    
-    r = np.linspace(1., 10., nr)
-    
-    theta = np.linspace(0., 0.5*mt.pi, ntheta)
-    wave = np.linspace(1, 10, nwave)
-    Kext = np.ones((nwave+1, nr, ntheta))
-    S = np.copy(Kext)
-    
-    foo = Envelope(wave, r, theta, Kext, S)

@@ -27,7 +27,7 @@ current_dir = os.path.dirname(__file__)
 parent_dir = os.path.abspath(os.path.join(current_dir, "../src"))
 sys.path.insert(0, parent_dir)
 
-from rtspyce import RTSpyce
+from rtspyce import RTSPyCE
 import planck
 import constants as ct
 
@@ -117,32 +117,32 @@ def comparison_rtspyce_sphericalshell(incl):
     Kext_env = Kin[:, None, None] * np.ones((nnu, nr, ntheta))
     Kext = np.concatenate((Kext_cavity, Kext_env), axis=1)
     
-    foo1 = RTSpyce(r, theta)
+    foo1 = RTSPyCE(r, theta)
     intensity_rtspyce = foo1.intensity_map(x, y, incl, S, Kext, I_star)
     intensity_rtspyce = intensity_rtspyce.reshape(nnu, n, n)
 
-    fig, ax = plt.subplots(3, nnu, figsize=(14, 6), layout="constrained")
-
-    c1 = []
-    c2 = []
-    c3 = []
-
-    diff = np.abs(intensity_rtspyce - intensity_shell)/intensity_shell
+    
+    diff = np.abs(intensity_rtspyce - intensity_shell) / intensity_shell
     diff[diff != diff] = 0.
-    for i in range(nnu):
 
+
+
+    for i in range(nnu):
+    
+        fig, ax = plt.subplots(1, 3, figsize=(15, 5), layout="tight")
+        
         img1 = intensity_shell[i].T
         img2 = intensity_rtspyce[i].T
         img3 = diff[i].T
         
-        c1.append(ax[0, i].imshow(img1, origin="lower", norm=LogNorm(1e-100, np.max(intensity_shell), clip=True)))
-        c2.append(ax[1, i].imshow(img2, origin="lower", norm=LogNorm(1e-100, np.max(intensity_rtspyce), clip=True)))
-        c3.append(ax[2, i].imshow(img3, origin="lower", norm=LogNorm(1e-16, np.max(diff), clip=True)))
+        c1 = ax[0].imshow(img1, origin="lower", norm=LogNorm(1e-100, np.max(intensity_shell), clip=True))
+        c2 = ax[1].imshow(img2, origin="lower", norm=LogNorm(1e-100, np.max(intensity_rtspyce), clip=True))
+        c3 = ax[2].imshow(img3, origin="lower", norm=LogNorm(1e-16, np.max(diff), clip=True))
 
-    fig.colorbar(c1[0], ax=ax[0, :], orientation='vertical')
-    fig.colorbar(c2[0], ax=ax[1, :], orientation='vertical')
-    fig.colorbar(c3[0], ax=ax[2, :], orientation='vertical')
-    
+        fig.colorbar(c1, ax=ax[0], orientation='vertical', fraction=0.046, pad=0.04)
+        fig.colorbar(c2, ax=ax[1], orientation='vertical', fraction=0.046, pad=0.04)
+        fig.colorbar(c3, ax=ax[2], orientation='vertical', fraction=0.046, pad=0.04)
+        
 if __name__ == "__main__":
 
     """ Test with an analytical case: a spherical shell with constant temperature and constant optical extinction. """

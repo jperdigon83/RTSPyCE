@@ -5,10 +5,10 @@ import os
 import sys
 
 current_dir = os.path.dirname(__file__)
-parent_dir = os.path.abspath(os.path.join(current_dir, "../src"))
+parent_dir = os.path.abspath(os.path.join(current_dir, "../../src"))
 sys.path.insert(0, parent_dir)
 
-from rtspyce import RTSpyce
+from rtspyce import RTSPyCE
 from planck import planck_function_freq
 import constants as ct
 
@@ -104,8 +104,7 @@ if __name__ == "__main__":
     # RTSpyce
     # ---
     
-    foo = RTSpyce(r, theta)
-
+    foo = RTSPyCE(r, theta)
     intensity_map = foo.intensity_map(x, y, incl, S, Kext, I_star)
     intensity_map = intensity_map.reshape(nnu, n_half, n)
     intensity_map = np.concatenate((intensity_map[:, ::-1, :], intensity_map), axis=1)

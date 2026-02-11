@@ -1,7 +1,7 @@
 import numpy as np
 import math as mt
 from envelope import Envelope
-from source import BlackBodySphere, Source
+from source import Source
 from rtspyce import RTSPyCE
 
 class Image:
@@ -94,16 +94,104 @@ class UniformCartesianImage(Image):
         
         self.N = N
         self.L = L
-        
-        xmax = 0.5 * L * (1. - 1./N)
-        x = np.linspace(-xmax, xmax, N)
+
+        xmax = 0.5 * L
+        xw = np.linspace(-xmax, xmax, N+1)
+        x = 0.5 * (xw[1:] + xw[:-1])
+
+        self.xw, self.yw = np.meshgrid(xw, xw, indexing="ij")
 
         x, y = np.meshgrid(x, x, indexing="ij")
+        
         x = x.flatten()
         y = y.flatten()
-
-        dpix = np.ones(len(x)) * L / N
+        dpix = np.ones(len(x)) * (L / N)**2
     
+        super().__init__(incl, PA, d, wave, x, y, dpix)
+
+    def compute_intensity(self, env: Envelope, src: Source):
+
+        if not src.R == env.r[0]:
+            raise ValueError("Source radius and r[0] should be equal")
+
+        if not np.all(self.wave == env.wave):
+            raise ValueError("Image and Envelope wavelengths should be equal")
+    
+        if not np.all(self.wave == src.wave):
+            raise ValueError("Image and Source wavelengths should be equal")
+
+        if (2*src.R) <= (self.xw[1, 0] - self.xw[0, 0]):
+
+            print("Warning: The star is not resolved in your image. You might want to add it after in one of the central pixel, with the add_star() method.\n")
+
+        
+        self.rt = RTSPyCE(env.r, env.theta)
+
+        self.intensity = np.empty((self.nwave, self.npix))
+
+        Nh = int(self.N**2/2)
+
+        dum_var = self.rt.intensity_map(self.x[:Nh], self.y[:Nh], self.incl, env.S, env.Kext, src.intensity)
+
+        self.intensity[:, :Nh] = dum_var
+         
+        dum_var = np.reshape(dum_var, (self.nwave, int(self.N/2), self.N))
+
+        self.intensity[:, Nh:] = np.reshape(dum_var[:, ::-1, :], (self.nwave, (self.N*int(self.N/2))))
+
+    def add_star(self, env: Envelope, src: Source):
+
+        print("Adding the star in the central pixel.\n")
+        
+        origin = np.array([0.])
+        
+        star_intensity = self.rt.intensity_map(origin, origin, self.incl, env.S, env.Kext, src.intensity)
+        
+        idx = int(self.N/2 * (self.N+1))
+       
+        self.intensity[:, idx] += star_intensity.ravel() * mt.pi * src.R**2 / self.dpix[idx]
+
+    def reconstruct_image(self):
+        
+        return np.reshape(self.intensity, (self.nwave, self.N, self.N))
+
+    
+class PolarImage(Image):
+
+    # logarithmically sampled image with resolved central star.
+
+    def __init__(self, R0, R, nu, nv, incl, PA, d, wave):
+
+        if not (nv % 2) == 0:
+            raise ValueError("nv should be even")
+
+        if not R > 0.:
+            raise ValueError("R should be strictly positive")
+
+        self.nu = nu
+        self.nv = nv
+       
+        vw = np.linspace(0., 2*mt.pi, nv+1)
+        v = 0.5 * (vw[1:] + vw[:-1])
+        dv = vw[1:] - vw[:-1]
+
+        aw = np.linspace(0., mt.log(R/R0+1.), nu+1)
+        a = 0.5 * (aw[1:] + aw[:-1])
+        
+        uw = R0 * (np.exp(aw) - 1.)
+        u = R0 * (np.exp(a) - 1.)
+        
+        self.vw, self.uw = np.meshgrid(vw, uw, indexing="ij")
+        
+        x = u[None, :] * np.sin(v[:, None])
+        y = u[None, :] * np.cos(v[:, None])
+
+        dpix = 0.5 * dv[:, None] * (uw[None, 1:]**2 - uw[None, :-1]**2)
+        
+        x = x.flatten()
+        y = y.flatten()
+        dpix = dpix.flatten()
+
         super().__init__(incl, PA, d, wave, x, y, dpix)
 
     def compute_intensity(self, env: Envelope, src: Source):
@@ -121,29 +209,17 @@ class UniformCartesianImage(Image):
 
         self.intensity = np.empty((self.nwave, self.npix))
 
-        Nh = int(self.N**2/2)
+        Nh = int(self.nu*self.nv/2)
 
         dum_var = foo.intensity_map(self.x[:Nh], self.y[:Nh], self.incl, env.S, env.Kext, src.intensity)
 
         self.intensity[:, :Nh] = dum_var
          
-        dum_var = np.reshape(dum_var, (self.nwave, int(self.N/2), self.N))
+        dum_var = np.reshape(dum_var, (self.nwave, int(self.nv/2), self.nu))
 
-        self.intensity[:, Nh:] = np.reshape(dum_var[:, ::-1, :], (self.nwave, (self.N*int(self.N/2))))
+        self.intensity[:, Nh:] = np.reshape(dum_var[:, ::-1, :], (self.nwave, (self.nu*int(self.nv/2))))
 
-        
+
     def reconstruct_image(self):
         
-        x = np.reshape(self.x, (self.N, self.N))
-        y = np.reshape(self.y, (self.N, self.N))
-        
-        image = np.reshape(self.intensity, (self.nwave, self.N, self.N))
-        
-        return x, y, image
-
-
-class PolarImage(Image):
-
-    def __init__(self, u, N, incl, PA, d, wave):
-
-        foo = None
+        return np.reshape(self.intensity, (self.nwave, self.nv, self.nu))
