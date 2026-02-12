@@ -1,8 +1,8 @@
 
 ![logo.jpg](logo/logo.jpg)
-_Made by Evaelle Clerson._
+_Image made by Evaelle Clerson._
 
-Welcome to RTSPyCE (Ray Tracing Simulation in python of circumstellar environments) !
+**Welcome to Ray Tracing Simulation in Python of Circumstellar Environments (RTSPyCE) !**
 
 _Warning: the documentation is being written and does not currently review all the features you could use._
 
