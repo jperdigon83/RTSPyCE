@@ -122,9 +122,8 @@ class UniformCartesianImage(Image):
 
         if (2*src.R) <= (self.xw[1, 0] - self.xw[0, 0]):
 
-            print("Warning: The star is not resolved in your image. You might want to add it after in one of the central pixel, with the add_star() method.\n")
+            print("Warning: The star is not resolved in your image. You might want to add it after, in one of the central pixel, with the add_star() method.\n")
 
-        
         self.rt = RTSPyCE(env.r, env.theta)
 
         self.intensity = np.empty((self.nwave, self.npix))
@@ -139,9 +138,10 @@ class UniformCartesianImage(Image):
 
         self.intensity[:, Nh:] = np.reshape(dum_var[:, ::-1, :], (self.nwave, (self.N*int(self.N/2))))
 
+        
     def add_star(self, env: Envelope, src: Source):
 
-        print("Adding the star in the central pixel.\n")
+        print("Adding the star in one of the central pixel ...\n")
         
         origin = np.array([0.])
         
@@ -151,7 +151,10 @@ class UniformCartesianImage(Image):
        
         self.intensity[:, idx] += star_intensity.ravel() * mt.pi * src.R**2 / self.dpix[idx]
 
+        
     def reconstruct_image(self):
+
+        """Returns a copy of the structured cube of images """
         
         return np.reshape(self.intensity, (self.nwave, self.N, self.N))
 
@@ -160,27 +163,35 @@ class PolarImage(Image):
 
     # logarithmically sampled image with resolved central star.
 
-    def __init__(self, R0, R, nu, nv, incl, PA, d, wave):
+    def __init__(self, Rstar, nu_lin, R, nu_log, nv, incl, PA, d, wave):
 
         if not (nv % 2) == 0:
             raise ValueError("nv should be even")
 
-        if not R > 0.:
-            raise ValueError("R should be strictly positive")
+        if not Rstar > 0.:
+            raise ValueError("Rstar should be strictly positive")
 
-        self.nu = nu
+        if not R > Rstar:
+            raise ValueError("R should be larger than Rstar")
+
+        self.nu = nu_lin + nu_log
         self.nv = nv
-       
+        
         vw = np.linspace(0., 2*mt.pi, nv+1)
         v = 0.5 * (vw[1:] + vw[:-1])
         dv = vw[1:] - vw[:-1]
 
-        aw = np.linspace(0., mt.log(R/R0+1.), nu+1)
+        uw_lin = np.linspace(0., Rstar, nu_lin+1)
+        u_lin = 0.5 * (uw_lin[1:] + uw_lin[:-1])
+        
+        aw = np.linspace(0., mt.log(R/Rstar), nu_log+1)
         a = 0.5 * (aw[1:] + aw[:-1])
-        
-        uw = R0 * (np.exp(aw) - 1.)
-        u = R0 * (np.exp(a) - 1.)
-        
+        uw_log = Rstar * np.exp(aw)
+        u_log = Rstar * np.exp(a)
+
+        uw = np.concatenate((uw_lin[:-1], uw_log))
+        u = np.concatenate((u_lin, u_log))
+      
         self.vw, self.uw = np.meshgrid(vw, uw, indexing="ij")
         
         x = u[None, :] * np.sin(v[:, None])
