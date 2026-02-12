@@ -160,9 +160,7 @@ class UniformCartesianImage(Image):
 
     
 class PolarImage(Image):
-
-    # logarithmically sampled image with resolved central star.
-
+    
     def __init__(self, Rstar, nu_lin, R, nu_log, nv, incl, PA, d, wave):
 
         if not (nv % 2) == 0:

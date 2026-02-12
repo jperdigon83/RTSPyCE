@@ -5,8 +5,7 @@ from scipy.interpolate import RegularGridInterpolator, interp1d
 from scipy.integrate import trapezoid
 
 class DustMap:
-
-
+    
     def __init__(self, dustmap_filename, extinction_filename):
 
         hdul = fits.open(dustmap_filename)
