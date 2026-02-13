@@ -146,8 +146,11 @@ def opacities(wavelengths, refractive_index_list, grain_radii_list, grain_dist_l
     # Averaging over all dust species
     # ---
 
-    Cabs = np.sum(Cabs_species*grain_prop_list[:, None], axis=0)
-    Csca = np.sum(Csca_species*grain_prop_list[:, None], axis=0)
+    # Cabs = np.sum(Cabs_species*grain_prop_list[:, None], axis=0)
+    # Csca = np.sum(Csca_species*grain_prop_list[:, None], axis=0)
+
+    Cabs = np.sum(Cabs_species*grain_prop_list, axis=0)
+    Csca = np.sum(Csca_species*grain_prop_list, axis=0)
 
     return Cabs, Csca
    

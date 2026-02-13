@@ -120,9 +120,19 @@ class UniformCartesianImage(Image):
         if not np.all(self.wave == src.wave):
             raise ValueError("Image and Source wavelengths should be equal")
 
-        if (2*src.R) <= (self.xw[1, 0] - self.xw[0, 0]):
+        dx = self.xw[1, 0] - self.xw[0, 0]
+        
+        if src.R <= dx:
 
             print("Warning: The star is not resolved in your image. You might want to add it after, in one of the central pixel, with the add_star() method.\n")
+
+
+        if (src.R > dx) & (src.R < 15*dx):
+
+            print("Warning: The star is not well resolved in your image. You might want to purposely unresolve it and use the add_star() function, or increase the resolution of your image.\n")
+
+
+            
 
         self.rt = RTSPyCE(env.r, env.theta)
 
