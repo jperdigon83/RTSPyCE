@@ -62,9 +62,11 @@ class Disc(Envelope):
         
         # number density of dust grains
 
-        H = params["Hin"] * R_rin**params["powH"]
+        Hin = params["coeff_Hin"] * mt.sqrt(ct.k_B * params["Tin"] * ct.R_sun * params["rin"]**3 / (2.3 * 1.66e-27 * ct.G * ct.M_sun * params["Mstar"]))
 
-        nin = params["tau0"] / (mt.sqrt(2*mt.pi) * Cext0 * params["Hin"])
+        H =  Hin * R_rin**params["powH"]
+
+        nin = params["tau0"] / (mt.sqrt(2*mt.pi) * Cext0 * Hin)
 
         n = np.empty_like(R)
         n[:, 1:] = nin * R_rin[:, 1:]**params["pown"] * np.exp(-0.5 * (z[:, 1:]/H[:, 1:])**2)
@@ -81,22 +83,24 @@ if __name__ == "__main__":
     sun2au = 4.6524726e-3
     au2sun = 1. / sun2au
     ly2sun = 13593003.553
+    mas2rad = 4.8481e-6
     
     params = {
 
-        "rstar": 1.,
-        "rin": 15.,
-        "rout": 60 * au2sun,
+        "rstar": 1.6,
+        "Mstar": 1.7,
+        "rin": 0.1 * au2sun,
+        "rout": 150. * au2sun,
         "nr": 128,
         "ntheta": 100,
         "Tin": 1500.,
         "powT": -1./2,
-        "wave":  np.array([0.365, 0.445, 0.551, 1.22, 1.63, 2.19, 3.45, 10.5]) * 1e-6,
+        "wave":  np.array([0.8, 1., 2.5]) * 1e-3,
         "amin": 1e-8,
         "amax": 1e-4,
         "na": 32,
         "powa": -3.5,
-        "Hin": 1.,
+        "coeff_Hin": 1.,
         "powH": 5./4,
         "pown": -11./4,
         "tau0": 100.,
@@ -106,64 +110,64 @@ if __name__ == "__main__":
     
     env = Disc(params)
 
-    Tstar = 5800.
+    Tstar = 4800.
     
     src = BlackBody(params["rstar"], Tstar, params["wave"]) 
 
     N = 256
-    L = 0.3 * au2sun
     incl = 60.
     PA = 0.
     d = 450 * ly2sun
+    L = d * 2 * mas2rad
     
-    # rec_img = image.UniformCartesianImage(N, L, incl, PA, d, params["wave"]) 
-    # rec_img.compute_intensity(env, src)
-    # imap = rec_img.reconstruct_image()
+    rec_img = image.UniformCartesianImage(N, L, incl, PA, d, params["wave"]) 
+    rec_img.compute_intensity(env, src)
+    imap = rec_img.reconstruct_image()
 
-    # fig, axes = plt.subplots(2, 4, figsize=(16, 8))
+    fig, axes = plt.subplots(1, 3, figsize=(16, 8))
 
-    # i = 0
+    i = 0
 
-    # vmin = 1e-30
-    # vmax = np.max(imap)
+    vmin = 1e-30
+    vmax = np.max(imap)
     
-    # for ax in axes.flat:
+    for ax in axes.flat:
         
-    #     im = ax.pcolormesh(rec_img.xw, rec_img.yw, imap[i], cmap="afmhot", norm=LogNorm(vmin=vmin, vmax=vmax, clip=True))
-    #     # c = ax.pcolormesh(rec_img.xw, rec_img.yw, imap[i], cmap="afmhot")
-    #     # cbar = fig.colorbar(im, ax=ax, orientation='vertical', fraction=0.046, pad=0.04)
-    #     ax.set_aspect('equal')
-    #     i += 1
+        im = ax.pcolormesh(rec_img.xw, rec_img.yw, imap[i], cmap="afmhot", norm=LogNorm(clip=True))
+        # im = ax.pcolormesh(rec_img.xw, rec_img.yw, imap[i], cmap="afmhot")
+        # cbar = fig.colorbar(im, ax=ax, orientation='vertical', fraction=0.046, pad=0.04)
+        ax.set_aspect('equal')
+        i += 1
 
 
-    params["wave"] = np.logspace(-7, -3, 128)
-    env = Disc(params)
+    # params["wave"] = np.logspace(-7, -3, 128)
+    # env = Disc(params)
 
-    src = BlackBody(params["rstar"], Tstar, params["wave"])
+    # src = BlackBody(params["rstar"], Tstar, params["wave"])
 
-    incl = np.linspace(0., 90., 6)
+    # incl = np.linspace(0., 90., 6)
 
 
-    plt.figure()
+    # plt.figure()
 
-    nu = ct.c/env.wave
+    # nu = ct.c/env.wave
     
-    for i in range(len(incl)):
+    # for i in range(len(incl)):
 
-        polar_img = image.PolarImage(params["rstar"], 2, params["rout"], 64, 64, incl[i], PA, d, params["wave"])
+    #     polar_img = image.PolarImage(params["rstar"], 2, params["rout"], 64, 64, incl[i], PA, d, params["wave"])
 
-        polar_img.compute_intensity(env, src)
+    #     polar_img.compute_intensity(env, src)
 
-        flux = polar_img.compute_flux()
+    #     flux = polar_img.compute_flux()
 
-        plt.plot(polar_img.wave, flux*nu)
+    #     plt.plot(polar_img.wave, flux*nu)
     
 
-    Fstar = mt.pi*src.intensity*(src.R/polar_img.d)**2
+    # Fstar = mt.pi*src.intensity*(src.R/polar_img.d)**2
 
-    plt.plot(polar_img.wave, Fstar*nu, "k--")
-    plt.xscale("log")
-    plt.yscale("log")
+    # plt.plot(polar_img.wave, Fstar*nu, "k--")
+    # plt.xscale("log")
+    # plt.yscale("log")
 
     
     
