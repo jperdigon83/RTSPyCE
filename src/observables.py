@@ -125,7 +125,7 @@ class Observables:
 
                     idx3 = (sta_baseline[:, 0] == sta_triplet[j, 0]) & (sta_baseline[:, 1] == sta_triplet[j, 2])
 
-                    triplet_perimeter[j] = baseline[idx1] + baseline[idx2] + baseline[idx3]
+                    triplet_perimeter[j] = baseline[idx1][0] + baseline[idx2][0] + baseline[idx3][0]
 
                 self.triplet_perimeter_data.append(triplet_perimeter)
 
@@ -158,16 +158,16 @@ class Observables:
         if apodisation is True:
             
             sigma_psf = wavelengths_model / (2.355*telescopeDiameter)
-            images_model *= np.exp(-0.5*(img.x[None, :]**2 + img.y[None, :]**2)/sigma_psf[:, None]**2)
+            images_model *= np.exp(-0.5*(img.x[None, :]**2 + img.y[None, :]**2)/ (img.d**2 * sigma_psf[:, None]**2))
             
         # ---
         # COMPUTATION OF THE OBSERVED FLUX
         # ---
 
-        flux_model = img.compute_flux()
-
+        flux_model = np.sum(img.intensity[idx, :]*img.dpix, axis=-1) / img.d**2
+    
         idx = flux_model > np.finfo(float).tiny
-        
+
         # ---
         # COMPUTATION OF THE VISIBILITIES
         # ---
