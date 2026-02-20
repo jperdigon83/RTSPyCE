@@ -201,6 +201,7 @@ class PolarImage(Image):
         u = np.concatenate((u_lin, u_log))
       
         self.vw, self.uw = np.meshgrid(vw, uw, indexing="ij")
+        self.v, self.u = np.meshgrid(v, u, indexing="ij")
         
         x = u[None, :] * np.sin(v[:, None])
         y = u[None, :] * np.cos(v[:, None])
