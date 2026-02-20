@@ -171,13 +171,19 @@ class Observables:
         # ---
         # COMPUTATION OF THE VISIBILITIES
         # ---
-
-        cosPA, sinPA = mt.cos(img.PA), mt.sin(img.PA)
+        
+        PA = np.deg2rad(img.PA)
+        
+        cosPA, sinPA = mt.cos(PA), mt.sin(PA)
 
         for i in range(self.n_files):
 
-            u_model = cosPA * self.u_data[i] + sinPA * self.v_data[i]
-            v_model = - sinPA * self.u_data[i] + cosPA * self.v_data[i]
+            #u_model = cosPA * self.u_data[i] + sinPA * self.v_data[i]
+            #v_model = - sinPA * self.u_data[i] + cosPA * self.v_data[i]
+
+            u_model = - sinPA * self.u_data[i] + cosPA * self.v_data[i]
+            v_model = cosPA * self.u_data[i] + sinPA * self.v_data[i]
+            
 
             alpha = img.x[None, None, :] / img.d
             beta = img.y[None, None, :] / img.d
