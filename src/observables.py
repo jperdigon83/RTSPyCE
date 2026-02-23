@@ -139,6 +139,9 @@ class Observables:
 
         self.vis_model = []
         self.vis2_model = []
+
+         alpha = img.x[None, None, :] / img.d
+         beta = img.y[None, None, :] / img.d
         
         # ---
         # SELECTING MODELS IN THE WAVELENGTHS BAND OF OBSERVATIONS
@@ -146,8 +149,6 @@ class Observables:
       
         idx = (img.wave >= self.lamMin) & (img.wave <= self.lamMax)
       
-        assert np.count_nonzero(idx) > 1
-
         wavelengths_model = img.wave[idx]
         images_model = img.intensity[idx]
 
@@ -158,13 +159,13 @@ class Observables:
         if apodisation is True:
             
             sigma_psf = wavelengths_model / (2.355*telescopeDiameter)
-            images_model *= np.exp(-0.5*(img.x[None, :]**2 + img.y[None, :]**2)/ (img.d**2 * sigma_psf[:, None]**2))
+            images_model *= np.exp(-0.5 * (alpha**2 + beta**2) / sigma_psf[:, None]**2)
             
         # ---
         # COMPUTATION OF THE OBSERVED FLUX
         # ---
 
-        flux_model = np.sum(img.intensity[idx, :]*img.dpix, axis=-1) / img.d**2
+        flux_model = np.sum(images_model[idx, :]*img.dpix, axis=-1)
     
         idx = flux_model > np.finfo(float).tiny
 
@@ -174,21 +175,22 @@ class Observables:
         
         PA = np.deg2rad(img.PA)
         
-        cosPA, sinPA = mt.cos(PA), mt.sin(PA)
-
+        cosPA = mt.cos(PA)
+        sinPA = mt.sin(PA)
+   
         for i in range(self.n_files):
+
+            # u_model = cosPA * self.u_data[i] + sinPA * self.v_data[i]
+            # v_model = - sinPA * self.u_data[i] + cosPA * self.v_data[i]
             
-            u_model = cosPA * self.u_data[i] - sinPA * self.v_data[i]
-            v_model = sinPA * self.u_data[i] + cosPA * self.v_data[i]
+            u_model = sinPA * self.u_data[i] + cosPA * self.v_data[i]
+            v_model = -cosPA * self.u_data[i] + sinPA * self.v_data[i]
             
-            alpha = img.x[None, None, :] / img.d
-            beta = img.y[None, None, :] / img.d
-            
-            phase = -2 * mt.pi * 1j * (alpha*u_model[:, None, None] + beta*v_model[:, None, None]) / wavelengths_model[None, :, None]
+            phase = -2 * mt.pi * 1j * (alpha * u_model[:, None, None] + beta* v_model[:, None, None]) / wavelengths_model[None, :, None]
 
             V_model = np.zeros((self.n_baselines[i], len(wavelengths_model)), dtype=complex)
           
-            V_model[:, idx] = np.sum(images_model[None, idx, :] * np.exp(phase[:, idx]) * img.dpix[None, None, :], axis=-1) / (img.d**2 * flux_model[None, idx])
+            V_model[:, idx] = np.sum(images_model[None, idx, :] * np.exp(phase[:, idx]) * img.dpix[None, None, :], axis=-1) / flux_model[None, idx]
 
             # Linearly interpolating complex visibilities of the model on the data wavelengths
             

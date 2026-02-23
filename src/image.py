@@ -69,10 +69,7 @@ class Image:
         alpha = self.x / self.d
         beta = self.y / self.d
 
-        ulam = u[:, None] / self.wave[None, :]
-        vlam = v[:, None] / self.wave[None, :]
-        
-        phasor = np.exp(-2.0 * 1j * mt.pi * (ulam[:, :, None] * alpha[None, None, :] + vlam[:, :, None] * beta[None, None, :]))
+        phasor = np.exp(-2.0 * 1j * mt.pi * (u[:, :, None] * alpha[None, None, :] + v[:, :, None] * beta[None, None, :]) / self.wave[None, :] )
         
         return np.sum(self.intensity[None, :, :] * phasor * self.dpix[None, None, :], axis=-1) / self.d**2
 
