@@ -140,8 +140,8 @@ class Observables:
         self.vis_model = []
         self.vis2_model = []
 
-         alpha = img.x[None, None, :] / img.d
-         beta = img.y[None, None, :] / img.d
+        alpha = img.x / img.d
+        beta = img.y / img.d
         
         # ---
         # SELECTING MODELS IN THE WAVELENGTHS BAND OF OBSERVATIONS
@@ -159,13 +159,13 @@ class Observables:
         if apodisation is True:
             
             sigma_psf = wavelengths_model / (2.355*telescopeDiameter)
-            images_model *= np.exp(-0.5 * (alpha**2 + beta**2) / sigma_psf[:, None]**2)
+            images_model *= np.exp(-0.5 * (alpha[None, :]**2 + beta[None, :]**2) / sigma_psf[:, None]**2)
             
         # ---
         # COMPUTATION OF THE OBSERVED FLUX
         # ---
-
-        flux_model = np.sum(images_model[idx, :]*img.dpix, axis=-1)
+        
+        flux_model = np.sum(images_model*img.dpix, axis=-1)
     
         idx = flux_model > np.finfo(float).tiny
 
@@ -186,7 +186,7 @@ class Observables:
             u_model = sinPA * self.u_data[i] + cosPA * self.v_data[i]
             v_model = -cosPA * self.u_data[i] + sinPA * self.v_data[i]
             
-            phase = -2 * mt.pi * 1j * (alpha * u_model[:, None, None] + beta* v_model[:, None, None]) / wavelengths_model[None, :, None]
+            phase = -2 * mt.pi * 1j * (alpha[None, None, :] * u_model[:, None, None] + beta[None, None, :] * v_model[:, None, None]) / wavelengths_model[None, :, None]
 
             V_model = np.zeros((self.n_baselines[i], len(wavelengths_model)), dtype=complex)
           
