@@ -8,6 +8,6 @@ _Warning: the documentation is being written and does not currently review all t
 
 # Where to start ?
 
-The [Wiki](https://gitlab.oca.eu/jperdigon/rtspyce/-/wikis/home) contains all informations you need to install the package and start to write your own models.
+The [Wiki](https://github.com/jperdigon83/RTSPyCE/wiki) contains all informations you need to install the package and start to write your own models.
 
-If you have any questions or if you need help, you can contact me by mail at jeremy.perdigon@oca.eu
+If you have any questions or if you need help, you can contact me by mail at jeremy.perdigon@mailo.com
