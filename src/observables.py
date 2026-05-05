@@ -260,14 +260,28 @@ class Observables:
         
         for i in range(self.n_files):
                 
-            diff = np.abs(self.t3phi_model[i] - self.t3phi_data[i])
+            # diff = np.abs(self.t3phi_model[i] - self.t3phi_data[i])
                 
-            idx = diff > 180.
-            diff[idx] = 360. - diff[idx]
+            # idx = diff > 180.
+            # diff[idx] = 360. - diff[idx]
                 
-            diff2 = (diff / self.err_t3phi_data[i])**2
-            diff2 = diff2[diff2 == diff2]
+            # diff2 = (diff / self.err_t3phi_data[i])**2
+            # diff2 = diff2[diff2 == diff2]
                 
+            # self.nchi2_t3 += len(diff2)
+            # self.chi2_t3 += np.sum(diff2)
+
+              # Robust angle difference in [-180, 180]
+            diff = (self.t3phi_model[i] - self.t3phi_data[i] + 180.) % 360. - 180.
+            diff = np.abs(diff)
+
+            err = self.err_t3phi_data[i]
+
+            # Valid points only
+            valid = np.isfinite(diff) & np.isfinite(err) & (err > 0)
+
+            diff2 = (diff[valid] / err[valid])**2
+
             self.nchi2_t3 += len(diff2)
             self.chi2_t3 += np.sum(diff2)
 

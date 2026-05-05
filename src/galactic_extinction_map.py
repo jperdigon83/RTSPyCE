@@ -43,7 +43,7 @@ class DustMap:
         
         # Loading the extinction curve
       
-        self.ext_curve = np.genfromtxt(extinction_filename)
+        self.ext_curve = np.genfromtxt(extinction_filename,skip_header=1)
         
         self.ext_curve[:, 0] *= 1.0e-9
 
@@ -60,30 +60,32 @@ class DustMap:
 
         interp = RegularGridInterpolator((self.lat_map, self.lon_map), self.err_ext)
         std_ext_star = interp((lat_star, lon_star))
-    
+
         # Integrating the differential extinction to the stellar distance (nasty integral)
-    
-        idx = (d <= dist_star) & (mean_ext_star == mean_ext_star)
+
+        idx = (self.dist_map <= dist_star) & (mean_ext_star == mean_ext_star)
 
         mean_ext_star = trapezoid(mean_ext_star[idx], self.dist_map[idx])
         std_ext_star = trapezoid(std_ext_star[idx], self.dist_map[idx])
+
         
         A = mean_ext_star * self.ext_curve[:, 1]
         std_A = std_ext_star * self.ext_curve[:, 1]
-
+        
         return A, std_A
 
 
     def derreddening_spectrum(self, A, std_A, wave, spectrum, sigma_spectrum):
         
-        interp = interp1d(self.ext_curve[:, 0], np.log(A), bounds_error=False, fill_value=(np.log(A[0]), np.log(A[-1])))
-   
-        A = np.exp(interp(wave))
-   
-        interp = interp1d(self.ext_curve[:, 0], std_A, bounds_error=False, fill_value=(std_A[0], std_A[-1]))
-    
-        std_A = interp(wave)
+        interp = interp1d(np.log(self.ext_curve[:, 0]), np.log(A), bounds_error=False, fill_value="extrapolate")
+        # interp = interp1d(np.log(self.ext_curve[:, 0]), np.log(A), bounds_error=False, fill_value=(np.log(A[0]), np.log(A[-1])))
 
+        A = np.exp(interp(np.log(wave)))
+    
+        interp = interp1d(self.ext_curve[:, 0], np.log(std_A), bounds_error=False, fill_value=(mt.log(std_A[0]), mt.log(std_A[-1])))
+    
+        std_A = np.exp(interp(wave))
+        
         spectrum_corr = spectrum * 10**(0.4*A)
         
         sigma_spectrum_corr = 10**(0.4*A) * (sigma_spectrum + 0.4*mt.log(10.) * spectrum * std_A)
@@ -111,22 +113,21 @@ if __name__ == "__main__":
 
     import matplotlib.pyplot as plt
 
-    data = np.genfromtxt("/home/jperdigon/projects/massif/HD50138/data/flux/HD50138_flux.dat")
+    data = np.genfromtxt("/home/jeremy/projects/massif/MWC300/data/flux/MWC300_photometry.dat")
     
-    foo = DustMap("mean_and_std_lbd.fits", "extinction_curve.txt")
+    foo = DustMap("/home/jeremy/data/DustMap/mean_and_std_lbd.fits", "/home/jeremy/data/DustMap/extinction_curve.txt")
 
-    l = 219.1517633045930
-    b = -3.1441503310724
-    d = 351
+    l = 25.0120110130506
+    b = 02.0967319086008
+    d = 1786.
     
     A, std_A = foo.compute_extinction_curve(l, b, d)
+
     spec, sigma = foo.derreddening_spectrum(A, std_A, data[:, 0], data[:, 1], data[:, 2])
 
-    spec_1, sigma_1 = foo.reddening_spectrum(A, std_A, data[:, 0], data[:, 1], data[:, 2])
-
+    plt.figure()
     plt.errorbar(data[:, 0], data[:, 1], yerr=data[:, 2])
     plt.errorbar(data[:, 0], spec, yerr=sigma, label="derreddened")
-    plt.errorbar(data[:, 0], spec_1, yerr=sigma_1, label="reddened")
     plt.yscale("log")
     plt.xscale("log")
     plt.legend()
