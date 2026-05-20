@@ -24,7 +24,7 @@ class DustMap:
         nlon = hdr['NAXIS1']
 
         self.lon_map = np.linspace(lonMin, lonMax, nlon)
-    
+        
         # Construction latitude vector
 
         latMin = hdr['CRVAL2'] - (hdr['CRPIX2']-1)*hdr['CDELT2']
@@ -50,6 +50,10 @@ class DustMap:
 
     def compute_extinction_curve(self, lon_star, lat_star, dist_star):
 
+        if dist_star > np.max(self.dist_map):
+            
+            raise ValueError("dstar > max(d_map). The extinction will be under-evaluated")
+        
         if lon_star > 180.:
             lon_star -= 360.
 
@@ -65,12 +69,17 @@ class DustMap:
 
         idx = (self.dist_map <= dist_star) & (mean_ext_star == mean_ext_star)
 
-        mean_ext_star = trapezoid(mean_ext_star[idx], self.dist_map[idx])
-        std_ext_star = trapezoid(std_ext_star[idx], self.dist_map[idx])
+        dist = np.concatenate((self.dist_map[idx], np.array([dist_star])))
+        ext_val = 0.5 * (mean_ext_star[idx][-1] + mean_ext_star[~idx][0])
+        std_ext_val = 0.5 * (std_ext_star[idx][-1] + std_ext_star[~idx][0])
+        ext = np.concatenate((mean_ext_star[idx], np.array([ext_val])))
+        err_ext = np.concatenate((std_ext_star[idx], np.array([std_ext_val])))
 
-        
-        A = mean_ext_star * self.ext_curve[:, 1]
-        std_A = std_ext_star * self.ext_curve[:, 1]
+        integral_ext = trapezoid(ext, dist)
+        integral_std_ext = trapezoid(err_ext, dist)
+                      
+        A = integral_ext * self.ext_curve[:, 1]
+        std_A = integral_std_ext * self.ext_curve[:, 1]
         
         return A, std_A
 
@@ -117,11 +126,19 @@ if __name__ == "__main__":
     
     foo = DustMap("/home/jeremy/data/DustMap/mean_and_std_lbd.fits", "/home/jeremy/data/DustMap/extinction_curve.txt")
 
-    l = 25.0120110130506
-    b = 02.0967319086008
-    d = 1786.
-    
+    l = 172.4990670746149
+    b= -07.9807725164859 
+    d = 156.
+   
     A, std_A = foo.compute_extinction_curve(l, b, d)
+
+    f = interp1d(foo.ext_curve[:, 0], A)
+    Av = f(0.55e-6)
+    f = interp1d(foo.ext_curve[:, 0], std_A)
+    std_Av = f(0.55e-6)
+    print(Av, std_Av)
+
+    exit()
 
     spec, sigma = foo.derreddening_spectrum(A, std_A, data[:, 0], data[:, 1], data[:, 2])
 

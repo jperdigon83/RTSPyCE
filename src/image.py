@@ -240,3 +240,88 @@ class PolarImage(Image):
     def reconstruct_image(self):
         
         return np.reshape(self.intensity, (self.nwave, self.nv, self.nu))
+
+
+    
+class PolarImage2(Image):
+    
+    def __init__(self, Rstar, Rin, Rout, nu1, nu2, nu3, nv, incl, PA, d, wave):
+
+        if not (nv % 2) == 0:
+            raise ValueError("nv should be even")
+
+        if not Rstar > 0.:
+            raise ValueError("Rstar should be strictly positive")
+
+        if not Rin > Rstar:
+            raise ValueError("R should be larger than Rstar")
+
+        if not Rout > Rin:
+            raise ValueError("R should be larger than Rstar")
+
+        self.nu = nu1 + nu2 + nu3
+        self.nv = nv
+        
+        vw = np.linspace(0., 2*mt.pi, nv+1)
+        v = 0.5 * (vw[1:] + vw[:-1])
+        dv = vw[1:] - vw[:-1]
+
+        u1w = np.linspace(0., Rstar, nu1+1)
+        u1 = 0.5 * (u1w[1:] + u1w[:-1])
+
+        aw = np.linspace(0., mt.log(Rin/Rstar), nu2+1)
+        a = 0.5 * (aw[1:] + aw[:-1])
+        u2w = Rstar * np.exp(aw)
+        u2 = Rstar * np.exp(a)
+        
+        aw = np.linspace(0., mt.log(Rout/Rin), nu3+1)
+        a = 0.5 * (aw[1:] + aw[:-1])
+        u3w = Rin * np.exp(aw)
+        u3 = Rin * np.exp(a)
+
+        uw = np.concatenate((u1w, u2w[1:], u3w[1:]))
+        u = np.concatenate((u1, u2, u3))
+      
+        self.vw, self.uw = np.meshgrid(vw, uw, indexing="ij")
+        self.v, self.u = np.meshgrid(v, u, indexing="ij")
+        
+        x = u[None, :] * np.sin(v[:, None])
+        y = u[None, :] * np.cos(v[:, None])
+
+        dpix = 0.5 * dv[:, None] * (uw[None, 1:]**2 - uw[None, :-1]**2)
+        
+        x = x.flatten()
+        y = y.flatten()
+        dpix = dpix.flatten()
+
+        super().__init__(incl, PA, d, wave, x, y, dpix)
+
+    def compute_intensity(self, env: Envelope, src: Source):
+
+        if not src.R == env.r[0]:
+            raise ValueError("Source radius and r[0] should be equal")
+
+        if not np.all(self.wave == env.wave):
+            raise ValueError("Image and Envelope wavelengths should be equal")
+    
+        if not np.all(self.wave == src.wave):
+            raise ValueError("Image and Source wavelengths should be equal")
+        
+        foo = RTSPyCE(env.r, env.theta)
+
+        self.intensity = np.empty((self.nwave, self.npix))
+
+        Nh = int(self.nu*self.nv/2)
+
+        dum_var = foo.intensity_map(self.x[:Nh], self.y[:Nh], self.incl, env.S, env.Kext, src.intensity)
+
+        self.intensity[:, :Nh] = dum_var
+         
+        dum_var = np.reshape(dum_var, (self.nwave, int(self.nv/2), self.nu))
+
+        self.intensity[:, Nh:] = np.reshape(dum_var[:, ::-1, :], (self.nwave, (self.nu*int(self.nv/2))))
+
+
+    def reconstruct_image(self):
+        
+        return np.reshape(self.intensity, (self.nwave, self.nv, self.nu))
